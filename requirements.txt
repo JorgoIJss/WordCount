@@ -3,4 +3,6 @@ python-docx==0.8.11
 werkzeug==2.0.1
 flask-assets==2.0
 spacy==3.7.2
-wordcloud==1.9.3 
+wordcloud==1.9.3
+matplotlib
+gunicorn 
