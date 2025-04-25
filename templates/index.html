@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="nl" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Document Analyse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cursor: {
+                            dark: '#1a1a1a',
+                            DEFAULT: '#242424',
+                            accent: '#4d9375',
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="h-full bg-gray-900 text-gray-100">
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 bg-cursor-dark border-b border-gray-800 z-50">
+        <nav class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-8">
+                    <!-- Logo -->
+                    <a href="/" class="flex items-center space-x-2">
+                        <svg class="w-8 h-8 text-cursor-accent" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19.707 4.293a1 1 0 0 0-1.414 0L10 12.586V14h1.414l8.293-8.293a1 1 0 0 0 0-1.414zM3 17v3h3l9.293-9.293-3-3L3 17z"/>
+                        </svg>
+                        <span class="text-xl font-semibold">WordAnalyzer</span>
+                    </a>
+                </div>
+                <!-- Download button -->
+                <a href="https://github.com/yourusername/word-counter/releases" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-cursor-accent hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cursor-accent">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Download App
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main content -->
+    <main class="min-h-screen pt-24 pb-12 px-4">
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-cursor p-6 rounded-lg border border-gray-800 shadow-xl">
+                <h1 class="text-2xl font-medium text-center mb-8">Word Document Analyse</h1>
+                
+                <div class="space-y-6">
+                    <!-- Upload form -->
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <input type="file" 
+                                   id="fileInput" 
+                                   accept=".docx"
+                                   class="w-full p-3 bg-gray-900 border border-gray-700 rounded-md text-gray-300 focus:outline-none focus:ring-2 focus:ring-cursor-accent focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-cursor-accent file:text-white hover:file:bg-opacity-90"/>
+                        </div>
+                        <button onclick="uploadFile()" 
+                                class="w-full py-3 px-4 bg-cursor-accent text-white rounded-md hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cursor-accent transition-colors">
+                            Upload en Analyseer
+                        </button>
+                    </div>
+
+                    <!-- Loading indicator -->
+                    <div id="loading" class="hidden">
+                        <div class="flex items-center justify-center space-x-2">
+                            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-cursor-accent"></div>
+                            <span>Document wordt geanalyseerd...</span>
+                        </div>
+                    </div>
+
+                    <!-- Error message -->
+                    <div id="error" class="hidden p-4 rounded-md text-center text-lg bg-red-900/20 border border-red-500/50 text-red-200"></div>
+
+                    <!-- Results -->
+                    <div id="results" class="hidden space-y-8">
+                        <!-- Total words -->
+                        <div class="text-center text-xl">
+                            Totaal aantal woorden: <span id="totalWords" class="font-semibold text-cursor-accent"></span>
+                        </div>
+
+                        <!-- Word types analysis -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="analysisResults">
+                            <!-- Results will be inserted here -->
+                        </div>
+
+                        <!-- Word Cloud -->
+                        <div class="mt-8">
+                            <h2 class="text-xl font-medium mb-4 text-center">Woordenwolk - Top 50 Woorden</h2>
+                            <div class="bg-cursor rounded-lg border border-gray-700 p-4">
+                                <img id="wordcloud" class="w-full h-auto" alt="Woordenwolk" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
+            const analysisDiv = document.getElementById('analysisResults');
+            const wordcloudImg = document.getElementById('wordcloud');
+            
+            if (!fileInput.files.length) {
+                showError('Selecteer eerst een bestand');
+                return;
+            }
+
+            // Reset UI
+            errorDiv.classList.add('hidden');
+            resultsDiv.classList.add('hidden');
+            loadingDiv.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.classList.add('hidden');
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                // Toon resultaten
+                document.getElementById('totalWords').textContent = data.total_words;
+                analysisDiv.innerHTML = ''; // Clear previous results
+
+                // Voeg resultaten toe voor elk woordtype
+                data.analysis.forEach(result => {
+                    const card = document.createElement('div');
+                    card.className = 'p-4 bg-gray-800 rounded-lg border border-gray-700';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-medium text-lg">${result.type}</h3>
+                            <span class="bg-cursor-accent/20 text-cursor-accent px-2 py-1 rounded text-sm">${result.count}</span>
+                        </div>
+                        ${result.examples.length ? `
+                            <div class="text-sm text-gray-400">
+                                Voorbeelden: ${result.examples.join(', ')}
+                            </div>
+                        ` : ''}
+                    `;
+                    analysisDiv.appendChild(card);
+                });
+
+                // Toon word cloud
+                wordcloudImg.src = `data:image/png;base64,${data.wordcloud}`;
+
+                resultsDiv.classList.remove('hidden');
+            })
+            .catch(error => {
+                loadingDiv.classList.add('hidden');
+                showError('Er is een fout opgetreden bij het uploaden');
+                console.error('Error:', error);
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        // Update bestandsnaam label
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if (e.target.files.length) {
+                e.target.setAttribute('title', e.target.files[0].name);
+            } else {
+                e.target.setAttribute('title', '');
+            }
+        });
+    </script>
+</body>
+</html> 
